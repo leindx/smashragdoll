@@ -20,10 +20,10 @@ export class Ragdoll {
     const headRadius = 45 * scale;
     const torsoWidth = 54 * scale;
     const torsoHeight = 80 * scale;
-    const armWidth = 15 * scale;
-    const armLength = 44 * scale;
-    const legWidth = 17 * scale;
-    const legLength = 54 * scale;
+    const armWidth = 16 * scale;
+    const armLength = 46 * scale;
+    const legWidth = 18 * scale;
+    const legLength = 56 * scale;
 
     const collisionGroup = Body.nextGroup(true);
 
@@ -47,7 +47,7 @@ export class Ragdoll {
     this.torso = Bodies.rectangle(x, y, torsoWidth, torsoHeight, {
       ...bodyOptions,
       label: 'RagdollTorso',
-      chamfer: { radius: 10 * scale }
+      chamfer: { radius: 12 * scale }
     });
 
     // Left Arm
@@ -271,11 +271,16 @@ export class Ragdoll {
     });
   }
 
-  // NO UPRIGHT TORQUE DURING FREEFALL SO IT FALLS HEAD-FIRST OR SIDEWAYS
   dampMotion() {
     const bodies = Composite.allBodies(this.composite);
     bodies.forEach(b => {
+      if (!b || !b.position) return;
       b.isSleeping = false;
+
+      // Safe NaN position recovery
+      if (isNaN(b.position.x) || isNaN(b.position.y)) {
+        Body.setPosition(b, { x: this.x || window.innerWidth / 2, y: this.y || window.innerHeight / 2 });
+      }
 
       if (isNaN(b.velocity.x) || isNaN(b.velocity.y)) {
         Body.setVelocity(b, { x: 0, y: 0 });
@@ -298,6 +303,7 @@ export class Ragdoll {
 
   setFaceImage(dataUrl, isPngCutout = true) {
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.src = dataUrl;
     img.onload = () => {
       this.faceImage = img;
@@ -319,8 +325,8 @@ export class Ragdoll {
     const scale = this.scale;
     const torsoHeight = 80 * scale;
     const headRadius = 45 * scale;
-    const armLength = 44 * scale;
-    const legLength = 54 * scale;
+    const armLength = 46 * scale;
+    const legLength = 56 * scale;
     const torsoWidth = 54 * scale;
 
     Body.setPosition(this.torso, { x, y });
@@ -356,9 +362,11 @@ export class Ragdoll {
       this.upperLeftLeg, this.lowerLeftLeg,
       this.upperRightLeg, this.lowerRightLeg
     ].forEach(b => {
-      Body.setVelocity(b, { x: 0, y: 0 });
-      Body.setAngle(b, 0);
-      Body.setAngularVelocity(b, 0);
+      if (b) {
+        Body.setVelocity(b, { x: 0, y: 0 });
+        Body.setAngle(b, 0);
+        Body.setAngularVelocity(b, 0);
+      }
     });
   }
 }

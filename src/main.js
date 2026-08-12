@@ -1,6 +1,7 @@
 import { Ragdoll } from './ragdoll.js';
 import { WeaponSystem } from './weapons.js';
 import { FaceCropper } from './cropper.js';
+import { PRESET_FACES } from './presets.js';
 import { audio } from './audio.js';
 import { haptics } from './haptics.js';
 
@@ -33,14 +34,6 @@ class Game {
     this.lastPointerPos = { x: 0, y: 0 };
     this.releaseVel = { x: 0, y: 0 };
     this.autoFireInterval = null;
-
-    this.environments = [
-      { name: 'Sky Ascender', bgTop: '#0b0f19', bgBottom: '#1e1b4b', icon: '🌌' },
-      { name: 'Dojo Arena', bgTop: '#18181b', bgBottom: '#27272a', icon: '🥋' },
-      { name: 'Padded Room', bgTop: '#0f172a', bgBottom: '#334155', icon: '🏥' },
-      { name: 'Neon City', bgTop: '#2e1065', bgBottom: '#09090b', icon: '🌆' }
-    ];
-    this.currentEnvIndex = 0;
 
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
@@ -111,6 +104,12 @@ class Game {
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2 - 30;
     this.ragdoll = new Ragdoll(cx, cy, 1.4);
+
+    // Automatically load default preset face avatar on startup!
+    if (PRESET_FACES && PRESET_FACES.length > 0) {
+      this.ragdoll.setFaceImage(PRESET_FACES[0].avatar, true);
+    }
+
     Composite.add(this.engine.world, this.ragdoll.composite);
   }
 
@@ -172,7 +171,6 @@ class Game {
       this.isFreefalling = false;
       this.ragdoll.resetPosition(window.innerWidth / 2, window.innerHeight / 2 - 30);
     });
-
 
     // MOUSE EVENTS
     this.canvas.addEventListener('mousedown', (e) => {
@@ -301,7 +299,7 @@ class Game {
     
     audio.playComboHitNote(this.comboCount);
 
-    this.updateCounters(true); // Pass isNewHit = true to force pop animation!
+    this.updateCounters(true);
 
     this.hitTexts.push({
       x, y, text,
@@ -317,7 +315,6 @@ class Game {
     }, 1800);
   }
 
-  // INFINITELY SCALABLE PROCEDURAL KILLER INSTINCT COMBO TITLE SYSTEM
   getComboTitle(combo) {
     if (combo < 2) return null;
 
@@ -352,7 +349,6 @@ class Game {
       }
     }
 
-    // Infinite Procedural Scaling System for Combos 100+ (evolving every 100 hits!)
     const hundredIndex = Math.floor(combo / 100);
 
     const prefixes = [
@@ -395,7 +391,6 @@ class Game {
       comboTitleEl.textContent = titleText;
       comboSubEl.textContent = `${this.comboCount} HITS!`;
 
-      // Always re-trigger punchy bounce animation on EVERY SINGLE HIT!
       if (isNewHit) {
         announcer.style.animation = 'none';
         announcer.offsetHeight;
@@ -435,7 +430,6 @@ class Game {
       Body.applyForce(this.ragdoll.torso, this.ragdoll.torso.position, { x: 0, y: liftForce });
 
     } else if (this.altitude > 0) {
-      // FREEFALL DESCENT
       if (!this.isFreefalling) {
         this.isFreefalling = true;
         this.freefallStartAltitude = this.altitude;
@@ -707,75 +701,89 @@ class Game {
       ctx.shadowBlur = 0;
     });
 
-    // Ragdoll Limbs
-    const compositeBodies = Composite.allBodies(this.ragdoll.composite);
+    // RENDER RAGDOLL LIMBS IN WORLD SPACE (100% BUG-FREE & ALWAYS VISIBLE)
+    if (this.ragdoll && this.ragdoll.composite) {
+      const compositeBodies = Composite.allBodies(this.ragdoll.composite);
 
-    compositeBodies.forEach(b => {
-      if (!b || b.label === 'RagdollHead') return;
+      compositeBodies.forEach(b => {
+        if (!b || b.label === 'RagdollHead') return;
 
-      ctx.save();
-      ctx.translate(b.position.x, b.position.y);
-      ctx.rotate(b.angle);
+        const vertices = b.vertices;
+        if (vertices && vertices.length > 0) {
+          ctx.save();
 
-      const isZapActive = this.weapons.activeZapArcs.length > 0;
-      ctx.fillStyle = isZapActive ? '#818cf8' : '#6366f1';
-      ctx.strokeStyle = isZapActive ? '#38bdf8' : '#a855f7';
-      ctx.lineWidth = isZapActive ? 5 : 3;
+          const isZapActive = this.weapons.activeZapArcs.length > 0;
+          ctx.fillStyle = isZapActive ? '#818cf8' : '#6366f1';
+          ctx.strokeStyle = isZapActive ? '#38bdf8' : '#a855f7';
+          ctx.lineWidth = isZapActive ? 5 : 3.5;
 
-      const vertices = b.vertices;
-      if (vertices && vertices.length > 0) {
-        ctx.beginPath();
-        ctx.moveTo(vertices[0].x - b.position.x, vertices[0].y - b.position.y);
-        for (let i = 1; i < vertices.length; i++) {
-          ctx.lineTo(vertices[i].x - b.position.x, vertices[i].y - b.position.y);
+          ctx.beginPath();
+          ctx.moveTo(vertices[0].x, vertices[0].y);
+          for (let i = 1; i < vertices.length; i++) {
+            ctx.lineTo(vertices[i].x, vertices[i].y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.restore();
         }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      }
 
-      this.renderBodyBumps(b);
+        this.renderBodyBumps(b);
+      });
 
-      ctx.restore();
-    });
+      // Head Rendering
+      const head = this.ragdoll.head;
+      if (head && head.position) {
+        ctx.save();
+        ctx.translate(head.position.x, head.position.y);
+        ctx.rotate(head.angle);
 
-    // Head Rendering
-    const head = this.ragdoll.head;
-    if (head && head.position) {
-      ctx.save();
-      ctx.translate(head.position.x, head.position.y);
-      ctx.rotate(head.angle);
+        const r = head.circleRadius || 45;
 
-      const r = head.circleRadius || 45;
+        if (this.ragdoll.faceImage) {
+          if (this.ragdoll.isPngCutout) {
+            const imgW = r * 2.5;
+            const imgH = r * 2.5;
+            ctx.drawImage(this.ragdoll.faceImage, -imgW / 2, -imgH / 2, imgW, imgH);
+          } else {
+            ctx.beginPath();
+            ctx.arc(0, 0, r, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(this.ragdoll.faceImage, -r, -r, r * 2, r * 2);
 
-      if (this.ragdoll.faceImage) {
-        if (this.ragdoll.isPngCutout) {
-          const imgW = r * 2.5;
-          const imgH = r * 2.5;
-          ctx.drawImage(this.ragdoll.faceImage, -imgW / 2, -imgH / 2, imgW, imgH);
+            ctx.strokeStyle = '#8b5cf6';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+          }
         } else {
+          // Fallback face drawing if no custom face image is set
+          ctx.fillStyle = '#ffdbac';
           ctx.beginPath();
           ctx.arc(0, 0, r, 0, Math.PI * 2);
-          ctx.clip();
-          ctx.drawImage(this.ragdoll.faceImage, -r, -r, r * 2, r * 2);
-
+          ctx.fill();
           ctx.strokeStyle = '#8b5cf6';
           ctx.lineWidth = 5;
           ctx.stroke();
+
+          // Cute eyes and mouth
+          ctx.fillStyle = '#1e293b';
+          ctx.beginPath();
+          ctx.arc(-r * 0.35, -r * 0.15, r * 0.14, 0, Math.PI * 2);
+          ctx.arc(r * 0.35, -r * 0.15, r * 0.14, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#1e293b';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(0, r * 0.2, r * 0.35, 0, Math.PI);
+          ctx.stroke();
         }
-      } else {
-        ctx.fillStyle = '#ffdbac';
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#8b5cf6';
-        ctx.lineWidth = 5;
-        ctx.stroke();
+
+        ctx.restore();
+
+        this.renderBodyBumps(head);
       }
-
-      this.renderBodyBumps(head);
-
-      ctx.restore();
     }
 
     // SAFE RENDERING OF HELIUM BALLOONS
@@ -825,7 +833,7 @@ class Game {
   }
 
   renderBodyBumps(body) {
-    if (!body) return;
+    if (!body || !body.position) return;
     const ctx = this.ctx;
     const now = Date.now();
     const bumps = this.weapons.bodyBumps.filter(b => b && b.body === body);
@@ -841,16 +849,21 @@ class Game {
       ctx.strokeStyle = '#ef4444';
       ctx.lineWidth = 3;
 
+      const cos = Math.cos(body.angle);
+      const sin = Math.sin(body.angle);
+      const worldX = body.position.x + (b.localX * cos - b.localY * sin);
+      const worldY = body.position.y + (b.localX * sin + b.localY * cos);
+
       ctx.beginPath();
-      ctx.arc(b.localX, b.localY, b.radius, 0, Math.PI * 2);
+      ctx.arc(worldX, worldY, b.radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
       ctx.strokeStyle = '#fef08a';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.moveTo(b.localX - 6, b.localY); ctx.lineTo(b.localX + 6, b.localY);
-      ctx.moveTo(b.localX, b.localY - 6); ctx.lineTo(b.localX, b.localY + 6);
+      ctx.moveTo(worldX - 6, worldY); ctx.lineTo(worldX + 6, worldY);
+      ctx.moveTo(worldX, worldY - 6); ctx.lineTo(worldX, worldY + 6);
       ctx.stroke();
 
       ctx.restore();
