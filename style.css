@@ -157,8 +157,24 @@ html, body {
   color: white;
 }
 
+.btn-donate {
+  background: linear-gradient(135deg, #ff5e5b, #ff007f);
+  color: white;
+  text-decoration: none;
+}
+
 .shadow-glow {
   box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+}
+
+.shadow-glow-kofi {
+  box-shadow: 0 4px 20px rgba(255, 94, 91, 0.4);
+}
+
+.btn-donate:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(255, 0, 127, 0.6);
+  color: white;
 }
 
 .btn-primary:hover {
