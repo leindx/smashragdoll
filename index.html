@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>SmashRagdoll - Muñeco de Trapo Interactivo</title>
+
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./style.css">
+
+  <!-- CDN Dependencies for instant standalone browser execution -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <div id="app" class="app-container">
+    <!-- Top Bar Navigation & Stats -->
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-icon">🥊</span>
+        <div class="brand-text">
+          <h1>SmashRagdoll</h1>
+          <p class="subtitle">¡Muñeco de trapo anti-estrés!</p>
+        </div>
+      </div>
+
+      <!-- Stats Counters -->
+      <div class="stats-container">
+        <div class="stat-badge hits-badge">
+          <span class="stat-label">GOLPES</span>
+          <span id="hit-count" class="stat-value">0</span>
+        </div>
+        <div class="stat-badge combo-stat-badge">
+          <span class="stat-label">RÁFAGA</span>
+          <span id="combo-stat-value" class="stat-value">0x</span>
+        </div>
+        <div id="altitude-badge" class="stat-badge altitude-stat-badge">
+          <span class="stat-label">ALTITUD</span>
+          <span id="altitude-value" class="stat-value">0 m</span>
+        </div>
+      </div>
+
+      <!-- Actions Header -->
+      <div class="top-actions">
+        <button id="btn-open-cropper" class="btn btn-primary shadow-glow">
+          <span class="btn-icon">📸</span>
+          <span class="btn-text">Cambiar Cara</span>
+        </button>
+        
+        <button id="btn-sound-toggle" class="btn btn-icon-only glass-btn" title="Activar/Desactivar Sonido">
+          <span id="sound-icon">🔊</span>
+        </button>
+
+        <button id="btn-reset-ragdoll" class="btn btn-icon-only glass-btn" title="Reiniciar Posición">
+          <span class="btn-icon">🔄</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="canvas-wrapper">
+      <canvas id="ragdoll-canvas"></canvas>
+
+      <!-- GIANT CENTER-SCREEN KILLER INSTINCT COMBO ANNOUNCER OVERLAY -->
+      <div id="combo-announcer" class="combo-announcer-overlay hidden">
+        <div id="combo-title" class="combo-title">TRIPLE COMBO!</div>
+        <div id="combo-subtitle" class="combo-subtitle">3 HITS</div>
+      </div>
+
+      <!-- Freefall Warning Banner -->
+      <div id="freefall-banner" class="freefall-banner hidden">
+        ⚠️ ¡CAÍDA EN PICADA LIBRE! ⚠️
+      </div>
+
+      <!-- Float Notification Overlay -->
+      <div id="rage-overlay" class="rage-banner hidden">
+        🔥 RAGE MODE ACTIVATED! 🔥
+      </div>
+    </main>
+
+    <!-- Floating Bottom Weapons Toolbar -->
+    <nav class="toolbar-container">
+      <div class="toolbar glass-panel">
+        <button class="tool-btn active" data-weapon="slap" title="Bofetada">
+          <span class="tool-icon">✋</span>
+          <span class="tool-label">Bofetada</span>
+        </button>
+
+        <button class="tool-btn" data-weapon="grab" title="Atrapar y Arrojar Violento">
+          <span class="tool-icon">✊</span>
+          <span class="tool-label">Arrojar</span>
+        </button>
+
+        <button class="tool-btn" data-weapon="glove" title="Puñetazo de Boxeo">
+          <span class="tool-icon">🥊</span>
+          <span class="tool-label">Boxeo</span>
+        </button>
+
+        <button class="tool-btn" data-weapon="machinegun" title="Metralleta Rápida">
+          <span class="tool-icon">🔫</span>
+          <span class="tool-label">Metralleta</span>
+        </button>
+
+        <button class="tool-btn" data-weapon="grenade" title="Lanzar Granada Explosiva">
+          <span class="tool-icon">💣</span>
+          <span class="tool-label">Granada</span>
+        </button>
+
+        <button class="tool-btn" data-weapon="zap" title="Rayo Taser Eléctrico">
+          <span class="tool-icon">⚡</span>
+          <span class="tool-label">Taser</span>
+        </button>
+
+        <button class="tool-btn" data-weapon="balloon" title="Atar Globos de Helio (Elevar)">
+          <span class="tool-icon">🎈</span>
+          <span class="tool-label">Globos</span>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <button id="btn-clear-canvas" class="tool-btn btn-secondary" title="Limpiar Globos y Marcas">
+          <span class="tool-icon">🧹</span>
+          <span class="tool-label">Limpiar</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Face Customizer Modal -->
+    <div id="cropper-modal" class="modal-overlay hidden">
+      <div class="modal-card glass-card">
+        <div class="modal-header">
+          <h2>Personalizar Cara del Muñeco</h2>
+          <button id="btn-close-modal" class="btn-close">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Preset Selector -->
+          <div class="presets-section">
+            <span class="section-title">Elige un Personaje o Presets Rápidos:</span>
+            <div id="presets-grid" class="presets-grid">
+              <!-- Preset avatars loaded via JS -->
+            </div>
+          </div>
+
+          <div class="divider-or"><span>O carga una imagen</span></div>
+
+          <!-- URL Input Section -->
+          <div class="url-input-container">
+            <input type="url" id="image-url-input" placeholder="Pegar URL de la imagen (ej: https://...)" class="url-input">
+            <button id="btn-load-url" class="btn btn-secondary">Cargar URL</button>
+          </div>
+
+          <!-- Upload Dropzone -->
+          <div class="upload-box" id="upload-box">
+            <input type="file" id="image-input" accept="image/*" class="file-input">
+            <span class="upload-icon">📁</span>
+            <span class="upload-text">O haz clic para seleccionar archivo de imagen</span>
+          </div>
+
+          <!-- PNG Transparency Option -->
+          <div class="checkbox-option">
+            <label class="checkbox-label">
+              <input type="checkbox" id="png-transparency-checkbox" checked>
+              <span>Reemplazar cara respetando transparencia (PNG sin fondo)</span>
+            </label>
+          </div>
+
+          <!-- Crop Editor Canvas & Controls -->
+          <div id="crop-editor-container" class="crop-editor-container hidden">
+            <div class="crop-canvas-wrapper">
+              <canvas id="crop-canvas"></canvas>
+              <div id="crop-ring-overlay" class="crop-ring-overlay hidden"></div>
+            </div>
+
+            <div class="crop-controls">
+              <div class="control-group">
+                <label for="zoom-slider">Zoom / Tamaño:</label>
+                <input type="range" id="zoom-slider" min="0.4" max="3" step="0.05" value="1">
+              </div>
+
+              <div class="control-group">
+                <label for="rotate-slider">Rotación:</label>
+                <input type="range" id="rotate-slider" min="-180" max="180" step="1" value="0">
+              </div>
+
+              <div class="control-group">
+                <label for="bright-slider">Brillo:</label>
+                <input type="range" id="bright-slider" min="50" max="150" step="1" value="100">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="btn-apply-face" class="btn btn-primary btn-full shadow-glow">
+            ¡Aplicar Cara al Muñeco!
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

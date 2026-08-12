@@ -1,0 +1,6 @@
+{
+  "appId": "com.ragdoll.desahogo",
+  "appName": "Ragdoll Desahogo",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}
