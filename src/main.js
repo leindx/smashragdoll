@@ -27,7 +27,7 @@ class Game {
     this.clouds = [];
     this.initClouds();
 
-    // Pointer & Multi-touch Tracking
+    // Pointer Tracking
     this.isMouseDown = false;
     this.dragStartPos = null;
     this.currentPointerPos = { x: 0, y: 0 };
@@ -290,7 +290,6 @@ class Game {
     const bodies = Composite.allBodies(this.ragdoll.composite);
     const clickedBodies = Query.point(bodies, { x, y });
 
-    // MOBILE TOUCH EXPANDED RADIUS CHECK (65px touch radius for effortless tapping)
     const targetBody = clickedBodies.length > 0 
       ? clickedBodies[0] 
       : this.weapons.findBodyNearPoint(x, y, 65);
@@ -518,15 +517,11 @@ class Game {
   resizeCanvas() {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    this.canvas.width = w * dpr;
-    this.canvas.height = h * dpr;
+    this.canvas.width = w;
+    this.canvas.height = h;
     this.canvas.style.width = `${w}px`;
     this.canvas.style.height = `${h}px`;
-
-    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-    this.ctx.scale(dpr, dpr);
 
     this.createBoundaries();
     if (this.ragdoll) {
@@ -581,6 +576,9 @@ class Game {
     const ctx = this.ctx;
     const w = window.innerWidth;
     const h = window.innerHeight;
+
+    // Guaranteed clean identity transform matrix at start of frame
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     let bgTop = '#0b0f19';
     let bgBottom = '#1e1b4b';

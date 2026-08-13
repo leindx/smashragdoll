@@ -18,51 +18,55 @@
 </head>
 <body>
   <div id="app" class="app-container">
-    <!-- Top Bar Navigation & Stats -->
+    <!-- Top Bar Navigation & Stats (2 Clean Rows for Mobile & Desktop) -->
     <header class="top-bar">
-      <div class="brand">
-        <span class="brand-icon">🥊</span>
-        <div class="brand-text">
-          <h1>SmashRagdoll</h1>
-          <p class="subtitle">¡Muñeco de trapo anti-estrés!</p>
+      <!-- Row 1: Brand Logo + Stats -->
+      <div class="top-bar-row top-row-brand">
+        <div class="brand">
+          <span class="brand-icon">🥊</span>
+          <div class="brand-text">
+            <h1>SmashRagdoll</h1>
+            <p class="subtitle">¡Muñeco de trapo anti-estrés!</p>
+          </div>
+        </div>
+
+        <div class="stats-container">
+          <div class="stat-badge hits-badge">
+            <span class="stat-label">GOLPES</span>
+            <span id="hit-count" class="stat-value">0</span>
+          </div>
+          <div class="stat-badge combo-stat-badge">
+            <span class="stat-label">RÁFAGA</span>
+            <span id="combo-stat-value" class="stat-value">0x</span>
+          </div>
+          <div id="altitude-badge" class="stat-badge altitude-stat-badge">
+            <span class="stat-label">ALTITUD</span>
+            <span id="altitude-value" class="stat-value">0 m</span>
+          </div>
         </div>
       </div>
 
-      <!-- Stats Counters -->
-      <div class="stats-container">
-        <div class="stat-badge hits-badge">
-          <span class="stat-label">GOLPES</span>
-          <span id="hit-count" class="stat-value">0</span>
-        </div>
-        <div class="stat-badge combo-stat-badge">
-          <span class="stat-label">RÁFAGA</span>
-          <span id="combo-stat-value" class="stat-value">0x</span>
-        </div>
-        <div id="altitude-badge" class="stat-badge altitude-stat-badge">
-          <span class="stat-label">ALTITUD</span>
-          <span id="altitude-value" class="stat-value">0 m</span>
-        </div>
-      </div>
+      <!-- Row 2: Action Buttons (Donar, Cambiar Cara, Sonido, Reset) -->
+      <div class="top-bar-row top-row-actions">
+        <div class="top-actions">
+          <a href="https://ko-fi.com/leindx" target="_blank" rel="noopener noreferrer" id="btn-donate-kofi" class="btn btn-donate shadow-glow-kofi" title="Donar en Ko-fi">
+            <span class="btn-icon">☕</span>
+            <span class="btn-text">Donar/Donate</span>
+          </a>
 
-      <!-- Actions Header -->
-      <div class="top-actions">
-        <a href="https://ko-fi.com/leindx" target="_blank" rel="noopener noreferrer" id="btn-donate-kofi" class="btn btn-donate shadow-glow-kofi" title="Donar en Ko-fi">
-          <span class="btn-icon">☕</span>
-          <span class="btn-text">Donar/Donate</span>
-        </a>
+          <button id="btn-open-cropper" class="btn btn-primary shadow-glow">
+            <span class="btn-icon">📸</span>
+            <span class="btn-text">Cambiar Cara</span>
+          </button>
+          
+          <button id="btn-sound-toggle" class="btn btn-icon-only glass-btn" title="Activar/Desactivar Sonido">
+            <span id="sound-icon">🔊</span>
+          </button>
 
-        <button id="btn-open-cropper" class="btn btn-primary shadow-glow">
-          <span class="btn-icon">📸</span>
-          <span class="btn-text">Cambiar Cara</span>
-        </button>
-        
-        <button id="btn-sound-toggle" class="btn btn-icon-only glass-btn" title="Activar/Desactivar Sonido">
-          <span id="sound-icon">🔊</span>
-        </button>
-
-        <button id="btn-reset-ragdoll" class="btn btn-icon-only glass-btn" title="Reiniciar Posición">
-          <span class="btn-icon">🔄</span>
-        </button>
+          <button id="btn-reset-ragdoll" class="btn btn-icon-only glass-btn" title="Reiniciar Posición">
+            <span class="btn-icon">🔄</span>
+          </button>
+        </div>
       </div>
     </header>
 
