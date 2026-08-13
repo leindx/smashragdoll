@@ -27,7 +27,7 @@ class Game {
     this.clouds = [];
     this.initClouds();
 
-    // Pointer Tracking
+    // Pointer & Multi-touch Tracking
     this.isMouseDown = false;
     this.dragStartPos = null;
     this.currentPointerPos = { x: 0, y: 0 };
@@ -35,8 +35,7 @@ class Game {
     this.releaseVel = { x: 0, y: 0 };
     this.autoFireInterval = null;
 
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    this.resizeCanvas();
 
     this.initPhysics();
     this.initRagdoll();
@@ -75,8 +74,8 @@ class Game {
       Composite.remove(this.engine.world, this.boundaries);
     }
 
-    const w = this.canvas.width || window.innerWidth;
-    const h = this.canvas.height || window.innerHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     const cy = h / 2 - 30;
     
     // Feet level ground floor top surface at cy + 215px
@@ -105,7 +104,6 @@ class Game {
     const cy = window.innerHeight / 2 - 30;
     this.ragdoll = new Ragdoll(cx, cy, 1.4);
 
-    // Automatically load default preset face avatar on startup!
     if (PRESET_FACES && PRESET_FACES.length > 0) {
       this.ragdoll.setFaceImage(PRESET_FACES[0].avatar, true);
     }
@@ -143,6 +141,7 @@ class Game {
 
   initEvents() {
     window.addEventListener('resize', () => this.resizeCanvas());
+    window.addEventListener('orientationchange', () => setTimeout(() => this.resizeCanvas(), 200));
 
     const toolBtns = document.querySelectorAll('.tool-btn[data-weapon]');
     toolBtns.forEach(btn => {
@@ -215,10 +214,11 @@ class Game {
     window.addEventListener('mouseup', (e) => releasePointer(e.clientX, e.clientY));
     window.addEventListener('mouseleave', (e) => releasePointer(e.clientX, e.clientY));
 
-    // TOUCH EVENTS
+    // MOBILE TOUCH EVENTS WITH ZERO SCROLL / GESTURE PREVENTIONS
     this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
       audio.init();
-      if (e.touches.length === 1) {
+      if (e.touches.length >= 1) {
         const touch = e.touches[0];
         this.isMouseDown = true;
         this.dragStartPos = { x: touch.clientX, y: touch.clientY };
@@ -231,10 +231,11 @@ class Game {
           this.startContinuousFire();
         }
       }
-    });
+    }, { passive: false });
 
-    window.addEventListener('touchmove', (e) => {
-      if (this.isMouseDown && e.touches.length === 1) {
+    this.canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (this.isMouseDown && e.touches.length >= 1) {
         const touch = e.touches[0];
         this.releaseVel = {
           x: touch.clientX - this.lastPointerPos.x,
@@ -247,12 +248,18 @@ class Game {
           this.ragdoll.duckAndCover(touch.clientX, touch.clientY);
         }
       }
-    });
+    }, { passive: false });
 
-    window.addEventListener('touchend', (e) => {
+    this.canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
       const touch = e.changedTouches[0] || this.currentPointerPos;
       releasePointer(touch.clientX, touch.clientY);
-    });
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      releasePointer(this.currentPointerPos.x, this.currentPointerPos.y);
+    }, { passive: false });
   }
 
   startContinuousFire() {
@@ -282,7 +289,11 @@ class Game {
 
     const bodies = Composite.allBodies(this.ragdoll.composite);
     const clickedBodies = Query.point(bodies, { x, y });
-    const targetBody = clickedBodies.length > 0 ? clickedBodies[0] : null;
+
+    // MOBILE TOUCH EXPANDED RADIUS CHECK (65px touch radius for effortless tapping)
+    const targetBody = clickedBodies.length > 0 
+      ? clickedBodies[0] 
+      : this.weapons.findBodyNearPoint(x, y, 65);
 
     const didHit = this.weapons.useWeapon(x, y, targetBody, this.dragStartPos, this.releaseVel);
 
@@ -505,11 +516,21 @@ class Game {
   }
 
   resizeCanvas() {
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    this.canvas.width = w * dpr;
+    this.canvas.height = h * dpr;
+    this.canvas.style.width = `${w}px`;
+    this.canvas.style.height = `${h}px`;
+
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.ctx.scale(dpr, dpr);
+
     this.createBoundaries();
     if (this.ragdoll) {
-      this.ragdoll.updateAnchorPosition(window.innerWidth / 2, window.innerHeight / 2 - 30);
+      this.ragdoll.updateAnchorPosition(w / 2, h / 2 - 30);
     }
   }
 
@@ -517,8 +538,8 @@ class Game {
     try {
       Engine.update(this.engine, 1000 / 60);
 
-      const w = this.canvas.width;
-      const h = this.canvas.height;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
 
       this.updateAltitudePhysics();
 
@@ -558,8 +579,8 @@ class Game {
 
   render() {
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
 
     let bgTop = '#0b0f19';
     let bgBottom = '#1e1b4b';

@@ -15,6 +15,8 @@ export class FaceCropper {
 
     this.isDragging = false;
     this.dragStart = { x: 0, y: 0 };
+    this.initialPinchDistance = null;
+    this.initialScaleOnPinch = 1.0;
 
     this.initDOM();
     this.initPresets();
@@ -82,24 +84,54 @@ export class FaceCropper {
       this.draw();
     });
 
-    // Drag canvas image
+    // Drag canvas image (Mouse)
     this.cropCanvas.addEventListener('mousedown', (e) => this.startDrag(e.clientX, e.clientY));
     window.addEventListener('mousemove', (e) => this.doDrag(e.clientX, e.clientY));
     window.addEventListener('mouseup', () => this.endDrag());
 
+    // Mobile Touch Drag & Pinch-Zoom
     this.cropCanvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
       if (e.touches.length === 1) {
         this.startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      } else if (e.touches.length === 2) {
+        // Pinch zoom
+        this.isDragging = false;
+        this.initialPinchDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+        this.initialScaleOnPinch = this.scale;
       }
-    });
+    }, { passive: false });
+
     window.addEventListener('touchmove', (e) => {
-      if (this.isDragging && e.touches.length === 1) {
+      if (e.touches.length === 1 && this.isDragging) {
+        e.preventDefault();
         this.doDrag(e.touches[0].clientX, e.touches[0].clientY);
+      } else if (e.touches.length === 2 && this.initialPinchDistance) {
+        e.preventDefault();
+        const dist = this.getTouchDistance(e.touches[0], e.touches[1]);
+        const factor = dist / this.initialPinchDistance;
+        this.scale = Math.min(3.0, Math.max(0.4, this.initialScaleOnPinch * factor));
+        this.zoomSlider.value = this.scale;
+        this.draw();
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        this.initialPinchDistance = null;
+      }
+      if (e.touches.length === 0) {
+        this.endDrag();
       }
     });
-    window.addEventListener('touchend', () => this.endDrag());
 
     this.btnApply.addEventListener('click', () => this.applyFace());
+  }
+
+  getTouchDistance(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
   initPresets() {
