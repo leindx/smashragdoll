@@ -40,10 +40,12 @@ class Game {
     this.releaseVel = { x: 0, y: 0 };
     this.autoFireInterval = null;
 
-    this.resizeCanvas();
-
     this.initPhysics();
     this.initRagdoll();
+    
+    // Resize after engine and ragdoll are initialized
+    this.resizeCanvas();
+
     this.initWeapons();
     this.initCropper();
     this.initEvents();
