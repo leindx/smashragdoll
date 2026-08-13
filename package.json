@@ -11,12 +11,18 @@
   "dependencies": {
     "canvas-confetti": "^1.9.4",
     "lucide": "^0.475.0",
-    "matter-js": "^0.20.0"
+    "matter-js": "^0.20.0",
+    "puppeteer": "^25.6.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.2.0",
     "@capacitor/core": "^6.2.0",
     "@capacitor/haptics": "^6.0.2",
     "vite": "^5.4.11"
-  }
+  },
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
 }
