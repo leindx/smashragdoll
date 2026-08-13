@@ -1,9 +1,6 @@
 import { audio } from './audio.js';
 import { haptics } from './haptics.js';
 
-const Matter = window.Matter;
-const { Bodies, Body, Composite, Constraint } = Matter;
-
 export class WeaponSystem {
   constructor(engine, ragdoll, onGrenadeHit) {
     this.engine = engine;
@@ -22,7 +19,6 @@ export class WeaponSystem {
   }
 
   useWeapon(clickX, clickY, targetBody, dragStart, releaseVel) {
-    // Safely check and pop balloons
     const poppedBalloon = this.checkBalloonPop(clickX, clickY, 60);
 
     if (this.currentWeapon !== 'grab') {
@@ -61,6 +57,7 @@ export class WeaponSystem {
   }
 
   doGrabThrow(currentX, currentY, body, dragStart, releaseVel) {
+    const { Body, Composite } = window.Matter;
     const target = body || this.findBodyNearPoint(currentX, currentY, 90) || this.ragdoll.torso;
     if (!target) return false;
 
@@ -99,6 +96,7 @@ export class WeaponSystem {
   }
 
   checkBalloonPop(x, y, radius = 60) {
+    const { Composite } = window.Matter;
     let popped = false;
     for (let i = this.balloons.length - 1; i >= 0; i--) {
       const bObj = this.balloons[i];
@@ -142,6 +140,7 @@ export class WeaponSystem {
   }
 
   doSlap(x, y, body) {
+    const { Body } = window.Matter;
     const target = body || this.findBodyNearPoint(x, y, 60);
     if (!target) return false;
 
@@ -165,6 +164,7 @@ export class WeaponSystem {
   }
 
   doGlovePunch(x, y, body) {
+    const { Body } = window.Matter;
     const target = body || this.findBodyNearPoint(x, y, 70);
     if (!target) return false;
 
@@ -185,6 +185,7 @@ export class WeaponSystem {
   }
 
   fireMachineGun(targetX, targetY, targetBody) {
+    const { Body } = window.Matter;
     const gunX = targetX > window.innerWidth / 2 ? 60 : window.innerWidth - 60;
     const gunY = window.innerHeight - 80;
 
@@ -238,6 +239,7 @@ export class WeaponSystem {
   }
 
   findBodyNearPoint(x, y, maxDist = 70) {
+    const { Composite } = window.Matter;
     const bodies = Composite.allBodies(this.ragdoll.composite);
     let minDist = Infinity;
     let closest = null;
@@ -256,6 +258,7 @@ export class WeaponSystem {
   }
 
   throwGrenade(startX, startY) {
+    const { Bodies, Body, Composite } = window.Matter;
     audio.playBoing();
 
     const targetPos = this.ragdoll.torso.position;
@@ -340,6 +343,7 @@ export class WeaponSystem {
   }
 
   doZap(x, y, body) {
+    const { Body } = window.Matter;
     const hitBody = body || this.findBodyNearPoint(x, y, 70);
     if (!hitBody) return false;
 
@@ -398,6 +402,7 @@ export class WeaponSystem {
   }
 
   attachBalloon(x, y, targetBody) {
+    const { Bodies, Constraint, Composite } = window.Matter;
     audio.playBoing();
     haptics.light();
 
@@ -473,6 +478,7 @@ export class WeaponSystem {
   }
 
   updateBalloons() {
+    const { Body } = window.Matter;
     this.balloons.forEach(bObj => {
       if (bObj && bObj.balloon && bObj.balloon.position) {
         Body.applyForce(bObj.balloon, bObj.balloon.position, { x: 0, y: -0.003 });
@@ -499,6 +505,7 @@ export class WeaponSystem {
   }
 
   clearSplatsAndBalloons() {
+    const { Composite } = window.Matter;
     this.bodyBumps = [];
     this.balloons.forEach(bObj => {
       if (bObj) {

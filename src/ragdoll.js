@@ -1,8 +1,8 @@
-const Matter = window.Matter;
-const { Bodies, Body, Composite, Constraint } = Matter;
-
 export class Ragdoll {
   constructor(x, y, scale = 1.4) {
+    const Matter = window.Matter;
+    const { Composite } = Matter;
+
     this.scale = scale;
     this.x = x || window.innerWidth / 2;
     this.y = y || window.innerHeight / 2 - 30;
@@ -17,6 +17,9 @@ export class Ragdoll {
   }
 
   createBodies(x, y, scale) {
+    const Matter = window.Matter;
+    const { Bodies, Body, Composite, Constraint } = Matter;
+
     const headRadius = 45 * scale;
     const torsoWidth = 54 * scale;
     const torsoHeight = 80 * scale;
@@ -214,6 +217,7 @@ export class Ragdoll {
 
   // FORCE CHAOTIC UNCONTROLLED HEAD-FIRST / SIDEWAYS TUMBLE
   startFreefallPlunge(startAltitude = 0) {
+    const { Body, Composite } = window.Matter;
     this.isFreefalling = true;
     this.suspensionConstraint.stiffness = 0.000001;
 
@@ -238,6 +242,7 @@ export class Ragdoll {
   }
 
   recoverToFloatingPosture() {
+    const { Body } = window.Matter;
     this.isFreefalling = false;
     this.suspensionConstraint.stiffness = 0.05;
 
@@ -249,6 +254,7 @@ export class Ragdoll {
   }
 
   duckAndCover(threatX, threatY) {
+    const { Body } = window.Matter;
     const now = Date.now();
     if (now - this.lastDodgeTime < 250) return;
     this.lastDodgeTime = now;
@@ -269,6 +275,7 @@ export class Ragdoll {
   }
 
   dampMotion() {
+    const { Body, Composite } = window.Matter;
     const bodies = Composite.allBodies(this.composite);
     const targetX = window.innerWidth / 2;
     const targetY = window.innerHeight / 2 - 30;
@@ -304,7 +311,6 @@ export class Ragdoll {
   setFaceImage(dataUrl, isPngCutout = true) {
     if (!dataUrl) return;
     const img = new Image();
-    // Only set crossOrigin for external http/https URLs, NEVER for data: URLs
     if (typeof dataUrl === 'string' && dataUrl.startsWith('http')) {
       img.crossOrigin = 'anonymous';
     }
@@ -322,6 +328,7 @@ export class Ragdoll {
   }
 
   resetPosition(x, y) {
+    const { Body } = window.Matter;
     const targetX = x || window.innerWidth / 2;
     const targetY = y || window.innerHeight / 2 - 30;
 
