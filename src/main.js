@@ -108,7 +108,12 @@ class Game {
     const { Composite } = window.Matter;
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2 - 30;
-    this.ragdoll = new Ragdoll(cx, cy, 1.4);
+    
+    // Scale responsive for mobile: if screen width is less than 768px, cut scale by half
+    const isMobile = window.innerWidth <= 768;
+    const scale = isMobile ? 0.8 : 1.6;
+
+    this.ragdoll = new Ragdoll(cx, cy, scale);
 
     if (PRESET_FACES && PRESET_FACES.length > 0) {
       this.ragdoll.setFaceImage(PRESET_FACES[0].avatar, true);
