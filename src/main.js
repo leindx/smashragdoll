@@ -465,7 +465,17 @@ class Game {
       this.altitudeVelocity += (targetSpeed - this.altitudeVelocity) * 0.05;
       this.altitude += this.altitudeVelocity * 0.06;
 
-      const liftForce = -0.003 * balloonCount * this.ragdoll.torso.mass;
+      // Hover target at 40% of screen height
+      const targetY = (window.innerHeight || 600) * 0.4;
+      const currentY = this.ragdoll.torso.position.y;
+      
+      let liftMultiplier = 1.0;
+      if (currentY < targetY) {
+         // Reduce lift smoothly as it goes above the target height, so it hovers
+         liftMultiplier = Math.max(0, 1 - (targetY - currentY) / 100);
+      }
+      
+      const liftForce = -0.004 * balloonCount * this.ragdoll.torso.mass * liftMultiplier;
       Body.applyForce(this.ragdoll.torso, this.ragdoll.torso.position, { x: 0, y: liftForce });
 
     } else if (this.altitude > 0) {
