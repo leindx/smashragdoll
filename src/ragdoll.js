@@ -4,8 +4,8 @@ const { Bodies, Body, Composite, Constraint } = Matter;
 export class Ragdoll {
   constructor(x, y, scale = 1.4) {
     this.scale = scale;
-    this.x = x;
-    this.y = y;
+    this.x = x || window.innerWidth / 2;
+    this.y = y || window.innerHeight / 2 - 30;
     this.faceImage = null;
     this.isPngCutout = true;
     this.lastDodgeTime = 0;
@@ -13,7 +13,7 @@ export class Ragdoll {
     this.isFreefalling = false;
 
     this.composite = Composite.create({ label: 'Ragdoll' });
-    this.createBodies(x, y, scale);
+    this.createBodies(this.x, this.y, scale);
   }
 
   createBodies(x, y, scale) {
@@ -30,8 +30,8 @@ export class Ragdoll {
     const bodyOptions = {
       collisionFilter: { group: collisionGroup },
       friction: 0.05,
-      frictionAir: 0.015, // Low air friction for wild tumbling
-      restitution: 0.85,  // Bouncy recoil on crash
+      frictionAir: 0.015,
+      restitution: 0.85,
       density: 0.003
     };
 
@@ -215,9 +215,8 @@ export class Ragdoll {
   // FORCE CHAOTIC UNCONTROLLED HEAD-FIRST / SIDEWAYS TUMBLE
   startFreefallPlunge(startAltitude = 0) {
     this.isFreefalling = true;
-    this.suspensionConstraint.stiffness = 0.000001; // Completely detach anchor
+    this.suspensionConstraint.stiffness = 0.000001;
 
-    // Flip 180 degrees (HEAD DOWN PLUNGE)
     const plungeAngle = Math.PI * (0.75 + (Math.random() - 0.5) * 0.5);
     
     Body.setAngle(this.torso, plungeAngle);
@@ -227,7 +226,6 @@ export class Ragdoll {
     Body.setAngularVelocity(this.torso, spinSpeed);
     Body.setAngularVelocity(this.head, spinSpeed * 1.2);
 
-    // Violent flailing forces to limbs
     const bodies = Composite.allBodies(this.composite);
     bodies.forEach(b => {
       if (b) {
@@ -239,7 +237,6 @@ export class Ragdoll {
     });
   }
 
-  // RESTORE UPGRADE FLOATING POSTURE AFTER LANDING BOUNCE
   recoverToFloatingPosture() {
     this.isFreefalling = false;
     this.suspensionConstraint.stiffness = 0.05;
@@ -273,13 +270,17 @@ export class Ragdoll {
 
   dampMotion() {
     const bodies = Composite.allBodies(this.composite);
+    const targetX = window.innerWidth / 2;
+    const targetY = window.innerHeight / 2 - 30;
+
     bodies.forEach(b => {
       if (!b || !b.position) return;
       b.isSleeping = false;
 
-      // Safe NaN position recovery
-      if (isNaN(b.position.x) || isNaN(b.position.y)) {
-        Body.setPosition(b, { x: this.x || window.innerWidth / 2, y: this.y || window.innerHeight / 2 });
+      // Safe NaN or out of bounds recovery
+      if (isNaN(b.position.x) || isNaN(b.position.y) || b.position.x < -100 || b.position.x > window.innerWidth + 100 || b.position.y < -100 || b.position.y > window.innerHeight + 100) {
+        Body.setPosition(b, { x: targetX, y: targetY });
+        Body.setVelocity(b, { x: 0, y: 0 });
       }
 
       if (isNaN(b.velocity.x) || isNaN(b.velocity.y)) {
@@ -289,26 +290,29 @@ export class Ragdoll {
         Body.setAngularVelocity(b, 0);
       }
 
-      // ONLY apply upright stabilizing torque when NOT freefalling!
       if (!this.isFreefalling) {
         const angleError = b.angle;
         if (!isNaN(angleError)) {
           b.torque = -angleError * 0.0008 * b.inertia;
         }
       } else {
-        b.torque = 0; // Free spin in mid-air
+        b.torque = 0;
       }
     });
   }
 
   setFaceImage(dataUrl, isPngCutout = true) {
+    if (!dataUrl) return;
     const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = dataUrl;
+    // Only set crossOrigin for external http/https URLs, NEVER for data: URLs
+    if (typeof dataUrl === 'string' && dataUrl.startsWith('http')) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => {
       this.faceImage = img;
       this.isPngCutout = isPngCutout;
     };
+    img.src = dataUrl;
   }
 
   updateAnchorPosition(x, y) {
@@ -318,9 +322,12 @@ export class Ragdoll {
   }
 
   resetPosition(x, y) {
+    const targetX = x || window.innerWidth / 2;
+    const targetY = y || window.innerHeight / 2 - 30;
+
     this.isFreefalling = false;
     this.suspensionConstraint.stiffness = 0.05;
-    this.updateAnchorPosition(x, y);
+    this.updateAnchorPosition(targetX, targetY);
 
     const scale = this.scale;
     const torsoHeight = 80 * scale;
@@ -329,29 +336,29 @@ export class Ragdoll {
     const legLength = 56 * scale;
     const torsoWidth = 54 * scale;
 
-    Body.setPosition(this.torso, { x, y });
+    Body.setPosition(this.torso, { x: targetX, y: targetY });
     Body.setAngle(this.torso, 0);
 
-    Body.setPosition(this.head, { x, y: y - torsoHeight / 2 - headRadius });
+    Body.setPosition(this.head, { x: targetX, y: targetY - torsoHeight / 2 - headRadius });
     Body.setAngle(this.head, 0);
 
-    const upperLeftArmX = x - torsoWidth / 2 - armLength / 2;
-    const upperLeftArmY = y - torsoHeight / 3;
+    const upperLeftArmX = targetX - torsoWidth / 2 - armLength / 2;
+    const upperLeftArmY = targetY - torsoHeight / 3;
     Body.setPosition(this.upperLeftArm, { x: upperLeftArmX, y: upperLeftArmY });
     Body.setPosition(this.lowerLeftArm, { x: upperLeftArmX - armLength, y: upperLeftArmY });
 
-    const upperRightArmX = x + torsoWidth / 2 + armLength / 2;
-    const upperRightArmY = y - torsoHeight / 3;
+    const upperRightArmX = targetX + torsoWidth / 2 + armLength / 2;
+    const upperRightArmY = targetY - torsoHeight / 3;
     Body.setPosition(this.upperRightArm, { x: upperRightArmX, y: upperRightArmY });
     Body.setPosition(this.lowerRightArm, { x: upperRightArmX + armLength, y: upperRightArmY });
 
-    const upperLeftLegX = x - torsoWidth / 4;
-    const upperLeftLegY = y + torsoHeight / 2 + legLength / 2;
+    const upperLeftLegX = targetX - torsoWidth / 4;
+    const upperLeftLegY = targetY + torsoHeight / 2 + legLength / 2;
     Body.setPosition(this.upperLeftLeg, { x: upperLeftLegX, y: upperLeftLegY });
     Body.setPosition(this.lowerLeftLeg, { x: upperLeftLegX, y: upperLeftLegY + legLength });
 
-    const upperRightLegX = x + torsoWidth / 4;
-    const upperRightLegY = y + torsoHeight / 2 + legLength / 2;
+    const upperRightLegX = targetX + torsoWidth / 4;
+    const upperRightLegY = targetY + torsoHeight / 2 + legLength / 2;
     Body.setPosition(this.upperRightLeg, { x: upperRightLegX, y: upperRightLegY });
     Body.setPosition(this.lowerRightLeg, { x: upperRightLegX, y: upperRightLegY + legLength });
 

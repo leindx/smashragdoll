@@ -61,29 +61,25 @@ class Game {
   initPhysics() {
     this.engine = Engine.create({
       gravity: { x: 0, y: 0.55 },
-      enableSleeping: false // NEVER freeze bodies
+      enableSleeping: false
     });
 
     this.boundaries = [];
     this.createBoundaries();
   }
 
-  // GROUND FLOOR AT FEET LEVEL
   createBoundaries() {
     if (this.boundaries.length > 0) {
       Composite.remove(this.engine.world, this.boundaries);
     }
 
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = window.innerWidth || 800;
+    const h = window.innerHeight || 600;
     const cy = h / 2 - 30;
     
-    // Feet level ground floor top surface at cy + 215px
     this.defaultGroundY = Math.min(h - 70, cy + 215);
-
     const wallThick = 200;
 
-    // Bouncy Low-Friction Ground Floor
     const ground = Bodies.rectangle(w / 2, this.defaultGroundY + wallThick / 2, w * 3, wallThick, {
       isStatic: true,
       restitution: 0.85,
@@ -143,10 +139,27 @@ class Game {
     window.addEventListener('resize', () => this.resizeCanvas());
     window.addEventListener('orientationchange', () => setTimeout(() => this.resizeCanvas(), 200));
 
+    // Helper for dual click & touchend button triggers across all mobile devices
+    const bindBtn = (idOrElem, handler) => {
+      const elem = typeof idOrElem === 'string' ? document.getElementById(idOrElem) : idOrElem;
+      if (!elem) return;
+
+      const trigger = (e) => {
+        e.stopPropagation();
+        audio.init();
+        handler(e);
+      };
+
+      elem.addEventListener('click', trigger);
+      elem.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        trigger(e);
+      }, { passive: false });
+    };
+
     const toolBtns = document.querySelectorAll('.tool-btn[data-weapon]');
     toolBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        audio.init();
+      bindBtn(btn, () => {
         toolBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         const weapon = btn.getAttribute('data-weapon');
@@ -155,23 +168,23 @@ class Game {
       });
     });
 
-    document.getElementById('btn-clear-canvas').addEventListener('click', () => {
+    bindBtn('btn-clear-canvas', () => {
       this.weapons.clearSplatsAndBalloons();
     });
 
-    document.getElementById('btn-sound-toggle').addEventListener('click', () => {
+    bindBtn('btn-sound-toggle', () => {
       const enabled = audio.toggleSound();
       document.getElementById('sound-icon').textContent = enabled ? '🔊' : '🔇';
     });
 
-    document.getElementById('btn-reset-ragdoll').addEventListener('click', () => {
+    bindBtn('btn-reset-ragdoll', () => {
       this.altitude = 0;
       this.altitudeVelocity = 0;
       this.isFreefalling = false;
       this.ragdoll.resetPosition(window.innerWidth / 2, window.innerHeight / 2 - 30);
     });
 
-    // MOUSE EVENTS
+    // MOUSE EVENTS ON CANVAS
     this.canvas.addEventListener('mousedown', (e) => {
       audio.init();
       this.isMouseDown = true;
@@ -214,7 +227,7 @@ class Game {
     window.addEventListener('mouseup', (e) => releasePointer(e.clientX, e.clientY));
     window.addEventListener('mouseleave', (e) => releasePointer(e.clientX, e.clientY));
 
-    // MOBILE TOUCH EVENTS WITH ZERO SCROLL / GESTURE PREVENTIONS
+    // MOBILE TOUCH EVENTS ON CANVAS
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       audio.init();
@@ -292,7 +305,7 @@ class Game {
 
     const targetBody = clickedBodies.length > 0 
       ? clickedBodies[0] 
-      : this.weapons.findBodyNearPoint(x, y, 65);
+      : this.weapons.findBodyNearPoint(x, y, 70);
 
     const didHit = this.weapons.useWeapon(x, y, targetBody, this.dragStartPos, this.releaseVel);
 
@@ -308,7 +321,6 @@ class Game {
     this.comboCount++;
     
     audio.playComboHitNote(this.comboCount);
-
     this.updateCounters(true);
 
     this.hitTexts.push({
@@ -515,8 +527,8 @@ class Game {
   }
 
   resizeCanvas() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = window.innerWidth || 800;
+    const h = window.innerHeight || 600;
 
     this.canvas.width = w;
     this.canvas.height = h;
@@ -525,7 +537,7 @@ class Game {
 
     this.createBoundaries();
     if (this.ragdoll) {
-      this.ragdoll.updateAnchorPosition(w / 2, h / 2 - 30);
+      this.ragdoll.resetPosition(w / 2, h / 2 - 30);
     }
   }
 
@@ -533,8 +545,8 @@ class Game {
     try {
       Engine.update(this.engine, 1000 / 60);
 
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const w = window.innerWidth || 800;
+      const h = window.innerHeight || 600;
 
       this.updateAltitudePhysics();
 
@@ -574,10 +586,10 @@ class Game {
 
   render() {
     const ctx = this.ctx;
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = window.innerWidth || 800;
+    const h = window.innerHeight || 600;
 
-    // Guaranteed clean identity transform matrix at start of frame
+    // Reset transform matrix to identity on every single frame
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     let bgTop = '#0b0f19';
@@ -720,7 +732,7 @@ class Game {
       ctx.shadowBlur = 0;
     });
 
-    // RENDER RAGDOLL LIMBS IN WORLD SPACE (100% BUG-FREE & ALWAYS VISIBLE)
+    // RENDER RAGDOLL LIMBS IN WORLD SPACE (VIBRANT & HIGH CONTRAST)
     if (this.ragdoll && this.ragdoll.composite) {
       const compositeBodies = Composite.allBodies(this.ragdoll.composite);
 
@@ -733,8 +745,8 @@ class Game {
 
           const isZapActive = this.weapons.activeZapArcs.length > 0;
           ctx.fillStyle = isZapActive ? '#818cf8' : '#6366f1';
-          ctx.strokeStyle = isZapActive ? '#38bdf8' : '#a855f7';
-          ctx.lineWidth = isZapActive ? 5 : 3.5;
+          ctx.strokeStyle = isZapActive ? '#38bdf8' : '#c084fc';
+          ctx.lineWidth = isZapActive ? 6 : 4;
 
           ctx.beginPath();
           ctx.moveTo(vertices[0].x, vertices[0].y);
@@ -776,7 +788,6 @@ class Game {
             ctx.stroke();
           }
         } else {
-          // Fallback face drawing if no custom face image is set
           ctx.fillStyle = '#ffdbac';
           ctx.beginPath();
           ctx.arc(0, 0, r, 0, Math.PI * 2);
@@ -785,7 +796,6 @@ class Game {
           ctx.lineWidth = 5;
           ctx.stroke();
 
-          // Cute eyes and mouth
           ctx.fillStyle = '#1e293b';
           ctx.beginPath();
           ctx.arc(-r * 0.35, -r * 0.15, r * 0.14, 0, Math.PI * 2);
@@ -800,7 +810,6 @@ class Game {
         }
 
         ctx.restore();
-
         this.renderBodyBumps(head);
       }
     }
