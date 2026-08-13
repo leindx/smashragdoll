@@ -7,12 +7,17 @@ import { haptics } from './haptics.js';
 
 const Matter = window.Matter;
 const confetti = window.confetti;
-const { Engine, Bodies, Body, Composite, Mouse, MouseConstraint, Query } = Matter;
 
 class Game {
   constructor() {
     this.canvas = document.getElementById('ragdoll-canvas');
     this.ctx = this.canvas.getContext('2d');
+
+    const { Engine, Mouse, MouseConstraint, Composite } = window.Matter;
+    this.Engine = Engine;
+    this.Mouse = Mouse;
+    this.MouseConstraint = MouseConstraint;
+    this.Composite = Composite;
 
     this.hitCount = 0;
     this.comboCount = 0;
@@ -59,6 +64,7 @@ class Game {
   }
 
   initPhysics() {
+    const { Engine, Composite } = window.Matter;
     this.engine = Engine.create({
       gravity: { x: 0, y: 0.55 },
       enableSleeping: false
@@ -69,7 +75,8 @@ class Game {
   }
 
   createBoundaries() {
-    if (this.boundaries.length > 0) {
+    const { Bodies, Composite } = window.Matter;
+    if (this.boundaries && this.boundaries.length > 0) {
       Composite.remove(this.engine.world, this.boundaries);
     }
 
@@ -96,6 +103,7 @@ class Game {
   }
 
   initRagdoll() {
+    const { Composite } = window.Matter;
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2 - 30;
     this.ragdoll = new Ragdoll(cx, cy, 1.4);
@@ -108,6 +116,7 @@ class Game {
   }
 
   initWeapons() {
+    const { Mouse, MouseConstraint, Composite } = window.Matter;
     this.weapons = new WeaponSystem(this.engine, this.ragdoll, (expX, expY) => {
       this.registerHit(expX, expY, 'KABOOM!');
     });
@@ -139,7 +148,6 @@ class Game {
     window.addEventListener('resize', () => this.resizeCanvas());
     window.addEventListener('orientationchange', () => setTimeout(() => this.resizeCanvas(), 200));
 
-    // Helper for dual click & touchend button triggers across all mobile devices
     const bindBtn = (idOrElem, handler) => {
       const elem = typeof idOrElem === 'string' ? document.getElementById(idOrElem) : idOrElem;
       if (!elem) return;
@@ -296,6 +304,7 @@ class Game {
   }
 
   triggerWeaponAction(x, y) {
+    const { Composite, Query } = window.Matter;
     if (this.weapons.currentWeapon === 'machinegun' || this.weapons.currentWeapon === 'grab') {
       this.mouseConstraint.constraint.bodyB = null;
     }
@@ -305,7 +314,7 @@ class Game {
 
     const targetBody = clickedBodies.length > 0 
       ? clickedBodies[0] 
-      : this.weapons.findBodyNearPoint(x, y, 70);
+      : this.weapons.findBodyNearPoint(x, y, 75);
 
     const didHit = this.weapons.useWeapon(x, y, targetBody, this.dragStartPos, this.releaseVel);
 
@@ -438,6 +447,7 @@ class Game {
   }
 
   updateAltitudePhysics() {
+    const { Body } = window.Matter;
     const balloonCount = this.weapons.balloons.length;
 
     if (balloonCount > 0) {
@@ -543,6 +553,7 @@ class Game {
 
   loop() {
     try {
+      const { Engine, Composite, Body } = window.Matter;
       Engine.update(this.engine, 1000 / 60);
 
       const w = window.innerWidth || 800;
@@ -585,6 +596,7 @@ class Game {
   }
 
   render() {
+    const { Composite } = window.Matter;
     const ctx = this.ctx;
     const w = window.innerWidth || 800;
     const h = window.innerHeight || 600;
@@ -732,7 +744,7 @@ class Game {
       ctx.shadowBlur = 0;
     });
 
-    // RENDER RAGDOLL LIMBS IN WORLD SPACE (VIBRANT & HIGH CONTRAST)
+    // RENDER RAGDOLL LIMBS IN WORLD SPACE (VIBRANT NEON & HIGH CONTRAST)
     if (this.ragdoll && this.ragdoll.composite) {
       const compositeBodies = Composite.allBodies(this.ragdoll.composite);
 
@@ -744,9 +756,9 @@ class Game {
           ctx.save();
 
           const isZapActive = this.weapons.activeZapArcs.length > 0;
-          ctx.fillStyle = isZapActive ? '#818cf8' : '#6366f1';
-          ctx.strokeStyle = isZapActive ? '#38bdf8' : '#c084fc';
-          ctx.lineWidth = isZapActive ? 6 : 4;
+          ctx.fillStyle = isZapActive ? '#a855f7' : '#ec4899';
+          ctx.strokeStyle = isZapActive ? '#38bdf8' : '#ffffff';
+          ctx.lineWidth = 4;
 
           ctx.beginPath();
           ctx.moveTo(vertices[0].x, vertices[0].y);
@@ -763,7 +775,7 @@ class Game {
         this.renderBodyBumps(b);
       });
 
-      // Head Rendering
+      // Head Rendering with Safe Image Completion & Vector Fallback
       const head = this.ragdoll.head;
       if (head && head.position) {
         ctx.save();
@@ -771,28 +783,30 @@ class Game {
         ctx.rotate(head.angle);
 
         const r = head.circleRadius || 45;
+        const faceImg = this.ragdoll.faceImage;
 
-        if (this.ragdoll.faceImage) {
+        if (faceImg && faceImg.complete && faceImg.naturalWidth > 0) {
           if (this.ragdoll.isPngCutout) {
             const imgW = r * 2.5;
             const imgH = r * 2.5;
-            ctx.drawImage(this.ragdoll.faceImage, -imgW / 2, -imgH / 2, imgW, imgH);
+            ctx.drawImage(faceImg, -imgW / 2, -imgH / 2, imgW, imgH);
           } else {
             ctx.beginPath();
             ctx.arc(0, 0, r, 0, Math.PI * 2);
             ctx.clip();
-            ctx.drawImage(this.ragdoll.faceImage, -r, -r, r * 2, r * 2);
+            ctx.drawImage(faceImg, -r, -r, r * 2, r * 2);
 
-            ctx.strokeStyle = '#8b5cf6';
+            ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 5;
             ctx.stroke();
           }
         } else {
+          // ALWAYS DRAW VIBRANT EXPRESSIVE VECTOR FACE IF IMAGE IS STILL LOADING
           ctx.fillStyle = '#ffdbac';
           ctx.beginPath();
           ctx.arc(0, 0, r, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#8b5cf6';
+          ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 5;
           ctx.stroke();
 
@@ -899,6 +913,16 @@ class Game {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  new Game();
-});
+const startGame = () => {
+  if (typeof window.Matter !== 'undefined') {
+    new Game();
+  } else {
+    setTimeout(startGame, 100);
+  }
+};
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', startGame);
+} else {
+  startGame();
+}
